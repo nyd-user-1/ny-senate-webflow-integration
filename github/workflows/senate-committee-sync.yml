@@ -1,0 +1,112 @@
+# .github/workflows/senate-committee-sync.yml
+name: NY Senate Committee Sync
+
+on:
+  # Run daily at 6 AM EST (11 AM UTC)
+  schedule:
+    - cron: '0 11 * * *'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+        type: boolean
+      dry_run:
+        description: 'Dry run (no actual updates)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  sync-committees:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run committee sync
+      env:
+        WEBFLOW_API_TOKEN: ${{ secrets.WEBFLOW_API_TOKEN }}
+        NY_SENATE_API_KEY: ${{ secrets.NY_SENATE_API_KEY }}
+        DEBUG_MODE: ${{ github.event.inputs.debug_mode }}
+        DRY_RUN: ${{ github.event.inputs.dry_run }}
+      run: |
+        echo "🚀 Starting NY Senate Committee Sync..."
+        echo "📅 Timestamp: $(date)"
+        
+        if [ "$DEBUG_MODE" == "true" ]; then
+          echo "🐛 Debug mode enabled"
+          export NODE_DEBUG=*
+        fi
+        
+        if [ "$DRY_RUN" == "true" ]; then
+          echo "🔍 Dry run mode - no actual updates will be made"
+          export DRY_RUN=true
+        fi
+        
+        node scripts/committee-sync.js
+        
+    - name: Create issue on failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const title = `🚨 Committee Sync Failed - ${new Date().toLocaleDateString()}`;
+          const body = `
+          ## Committee Sync Failure Report
+          
+          **Timestamp:** ${new Date().toISOString()}  
+          **Workflow:** [${context.workflow}](${context.payload.repository.html_url}/actions/runs/${context.runId})
+          **Branch:** ${context.ref}
+          
+          ### Details
+          - **Run ID:** ${context.runId}
+          - **Actor:** ${context.actor}
+          - **Event:** ${context.eventName}
+          
+          ### Possible Causes
+          - API key issues (Webflow or NY Senate)
+          - Network connectivity problems
+          - Data format changes in source API
+          - Rate limiting
+          
+          ### Next Steps
+          1. Check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for detailed error messages
+          2. Verify API keys are still valid
+          3. Test the sync manually if needed
+          4. Check if NY Senate API structure has changed
+          
+          ### Manual Run
+          You can manually trigger the sync from the [Actions tab](${context.payload.repository.html_url}/actions/workflows/senate-committee-sync.yml) with debug mode enabled.
+          
+          ---
+          *This issue was automatically created by the committee sync workflow.*
+          `;
+          
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['automation', 'bug', 'committee-sync']
+          });
+          
+    - name: Post success summary
+      if: success()
+      run: |
+        echo "✅ Committee sync completed successfully!"
+        echo "📊 Check your Webflow CMS for updated committee data"
+        echo "🔗 Webflow Editor: https://webflow.com/design/${{ vars.WEBFLOW_SITE_ID || 'your-site' }}"
