@@ -1,0 +1,39 @@
+{
+  "name": "ny-senate-webflow-integration",
+  "version": "1.0.0",
+  "description": "Automated sync between NY Senate API and Webflow CMS for committee data",
+  "main": "scripts/committee-sync.js",
+  "scripts": {
+    "sync": "node scripts/committee-sync.js",
+    "test": "node scripts/committee-sync.js --dry-run",
+    "debug": "NODE_DEBUG=* node scripts/committee-sync.js"
+  },
+  "keywords": [
+    "webflow",
+    "ny-senate",
+    "automation",
+    "cms",
+    "government-data",
+    "api-sync"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/ny-senate-webflow-integration.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/ny-senate-webflow-integration/issues"
+  },
+  "homepage": "https://github.com/your-username/ny-senate-webflow-integration#readme"
+}
